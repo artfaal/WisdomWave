@@ -47,6 +47,11 @@ async def send_welcome(message: types.Message):
     """
     await message.answer(welcome_text)
 
+def escape_markdown(text: str) -> str:
+    """Экранирует символы Markdown."""
+    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    return ''.join('\\' + char if char in escape_chars else char for char in text)
+
 
 @dp.message_handler(lambda message: message.text.lower() == "забудь")
 async def forget_history(message: types.Message):
@@ -95,7 +100,7 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
         model=MODEL_NAME,
         messages=user_messages
     )
-    response_text = response['choices'][0]['message']['content'].strip()
+    response_text = escape_markdown(response['choices'][0]['message']['content'].strip())
 
     # Разбиваем ответ на части, если он слишком длинный для Telegram
     response_parts = [response_text[i:i+TELEGRAM_MAX_MESSAGE_LENGTH] for i in range(0, len(response_text), TELEGRAM_MAX_MESSAGE_LENGTH)]
