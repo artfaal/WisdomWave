@@ -18,7 +18,7 @@ dp = Dispatcher(bot)
 MAX_TOKENS = 16000  # Максимальное количество токенов для модели gpt-3.5-turbo
 
 # Настройка SQLite
-conn = sqlite3.connect('messages.db')
+conn = sqlite3.connect('data/messages.db')
 cursor = conn.cursor()
 
 # Создание таблицы для хранения истории сообщений
