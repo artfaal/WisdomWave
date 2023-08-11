@@ -17,6 +17,9 @@ dp = Dispatcher(bot)
 
 MAX_TOKENS = 16000  # Максимальное количество токенов для модели gpt-3.5-turbo
 
+# Максимальная длина сообщения для Telegram
+TELEGRAM_MAX_MESSAGE_LENGTH = 4096
+
 # Настройка SQLite
 conn = sqlite3.connect('data/messages.db')
 cursor = conn.cursor()
@@ -93,16 +96,17 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
         messages=user_messages
     )
     response_text = response['choices'][0]['message']['content'].strip()
-    total_tokens_used = response['usage']['total_tokens']
-    token_percentage = (total_tokens_used / MAX_TOKENS) * 100
 
-    # Отправляем ответ пользователю
-    await bot.send_message(
-        chat_id=message.chat.id,
-        text=response_text,
-        reply_to_message_id=message.message_id if chat_type in ["group", "supergroup"] else None,
-        parse_mode=types.ParseMode.MARKDOWN
-    )
+    # Разбиваем ответ на части, если он слишком длинный для Telegram
+    response_parts = [response_text[i:i+TELEGRAM_MAX_MESSAGE_LENGTH] for i in range(0, len(response_text), TELEGRAM_MAX_MESSAGE_LENGTH)]
+
+    for part in response_parts:
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=part,
+            reply_to_message_id=message.message_id if chat_type in ["group", "supergroup"] else None,
+            parse_mode=types.ParseMode.MARKDOWN
+        )
 
     # Добавляем ответ бота в базу данных
     cursor.execute("INSERT INTO message_history (chat_id, user_id, role, content) VALUES (?, ?, ?, ?)",
@@ -115,7 +119,10 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
     else:
         logging.info(f"[{chat_type}] Response from OpenAI: {response_text}")
 
+    total_tokens_used = response['usage']['total_tokens']
+    token_percentage = (total_tokens_used / MAX_TOKENS) * 100
     logging.info(f"Tokens used: {total_tokens_used} ({token_percentage:.2f}% of {MAX_TOKENS})")
+
 
 async def on_startup(dp):
     global BOT_USERNAME
