@@ -61,20 +61,30 @@ async def handle_text_messages(message: types.Message):
     group_title = message.chat.title if message.chat.title else str(message.chat.id)
     if message.chat.type in ["group", "supergroup"]:
         logging.info(f"Received message in group: {group_title}")
-        if message.text.lower().strip() == "забудь":
-            await forget_history(message)
-            return
         if BOT_USERNAME and f"@{BOT_USERNAME}" in message.text:
             logging.info(f"Detected mention of @{BOT_USERNAME}")
             text_without_mention = message.text.replace(f"@{BOT_USERNAME}", "").strip()
+            
+            # Проверка на команду "забудь"
+            if text_without_mention.lower().strip() == "забудь":
+                await forget_history(message)
+                return
+            
             await ask_openai(message, text_without_mention, message.chat.type, group_title)
+            
         elif message.reply_to_message and message.reply_to_message.from_user.id == bot.id:
+            # Проверка на команду "забудь"
+            if message.text.lower().strip() == "забудь":
+                await forget_history(message)
+                return
+            
             await ask_openai(message, message.text, message.chat.type, group_title)
         else:
             logging.info(f"Did not detect a mention or reply in group message: {group_title}.")
             return
     else:
         await ask_openai(message, message.text, "private", group_title)
+
 
 async def ask_openai(message: types.Message, text: str, chat_type: str, group_title=None):
     chat_id = message.chat.id
