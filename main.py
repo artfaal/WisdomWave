@@ -31,7 +31,7 @@ BOT_USERNAME = None
 
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
-    welcome_text = """
+    welcome_text = f"""
 Привет! Я ваш бот, созданный на основе технологии OpenAI. Вот что я умею:
 
 1. Отвечать на разнообразные вопросы.
@@ -41,11 +41,16 @@ async def send_welcome(message: types.Message):
 Если вы хотите сбросить контекст общения и начать разговор заново, просто напишите мне "забудь".
 
 Задайте свой вопрос или уточните, как я могу вам помочь!
+
+**Настройки бота:**
+- Используемая модель: {MODEL_NAME}
+- Максимальное количество токенов: {MAX_TOKENS}
     """
-    await message.answer(welcome_text)
+    await message.answer(welcome_text, parse_mode=types.ParseMode.MARKDOWN)
 
 
-@dp.message_handler(lambda message: message.text.lower() == "забудь")
+
+@dp.message_handler(lambda message: message.text.lower().strip() == "забудь")
 async def forget_history(message: types.Message):
     cursor.execute("DELETE FROM message_history WHERE user_id=?", (message.from_user.id,))
     conn.commit()
