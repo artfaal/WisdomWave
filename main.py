@@ -52,7 +52,7 @@ async def send_welcome(message: types.Message):
 
 @dp.message_handler(lambda message: message.text.lower().strip() == "забудь")
 async def forget_history(message: types.Message):
-    cursor.execute("DELETE FROM message_history WHERE user_id=?", (message.from_user.id,))
+    cursor.execute("DELETE FROM message_history WHERE chat_id=?", (message.chat.id,))
     conn.commit()
     await message.answer("Я забыл всю нашу предыдущую переписку.")
 
@@ -61,6 +61,9 @@ async def handle_text_messages(message: types.Message):
     group_title = message.chat.title if message.chat.title else str(message.chat.id)
     if message.chat.type in ["group", "supergroup"]:
         logging.info(f"Received message in group: {group_title}")
+        if message.text.lower().strip() == "забудь":
+            await forget_history(message)
+            return
         if BOT_USERNAME and f"@{BOT_USERNAME}" in message.text:
             logging.info(f"Detected mention of @{BOT_USERNAME}")
             text_without_mention = message.text.replace(f"@{BOT_USERNAME}", "").strip()
