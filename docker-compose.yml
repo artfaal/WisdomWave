@@ -6,8 +6,5 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./data:/app/data
-    environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - MODEL_NAME=${MODEL_NAME}
-      - OPENAI_ORGANIZATION=${OPENAI_ORGANIZATION}
+    env_file:
+      - ./.env

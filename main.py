@@ -9,14 +9,13 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_DEFAULT_TELEGRAM_TOKE
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'YOUR_DEFAULT_OPENAI_KEY')
 MODEL_NAME = os.getenv('MODEL_NAME', 'gpt-3.5-turbo-16k')
 OPENAI_ORGANIZATION = os.getenv('OPENAI_ORGANIZATION', None)  # Если организация не указана, используется None
+MAX_TOKENS = os.getenv('MAX_TOKENS', '16000')  # Максимальное количество токенов для модели
 
 openai.api_key = OPENAI_API_KEY
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher(bot)
-
-MAX_TOKENS = 16000  # Максимальное количество токенов для модели
 
 # Настройка SQLite
 conn = sqlite3.connect('data/messages.db')
