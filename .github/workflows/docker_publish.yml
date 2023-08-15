@@ -26,8 +26,8 @@ jobs:
             echo "DOCKER_TAGS=artfaal/wisdomwave:master-latest" >> $GITHUB_ENV
             echo "DEPLOY_PATHS=/var/docker/compose/wisdomwave/3.5,/var/docker/compose/wisdomwave/4" >> $GITHUB_ENV
         else
-            echo "DOCKER_TAGS=artfaal/wisdomwave:dev-latest" >> $GITHUB_ENV
-            echo "DEPLOY_PATHS=/var/docker/compose/wisdomwave/dev" >> $GITHUB_ENV
+            echo "DOCKER_TAGS=artfaal/wisdomwave:debug-latest" >> $GITHUB_ENV
+            echo "DEPLOY_PATHS=/var/docker/compose/wisdomwave/debug" >> $GITHUB_ENV
         fi
 
     - name: Build and push Docker image
