@@ -3,8 +3,6 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - master
-      - dev
       - '*'
 
 jobs:
@@ -21,17 +19,16 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-    - name: Set Docker tags for master branch
-      if: github.ref == 'refs/heads/master'
-      run: echo "DOCKER_TAGS=artfaal/wisdomwave:latest,artfaal/wisdomwave:master-latest" >> $GITHUB_ENV
-
-    - name: Set Docker tags for dev branch
-      if: github.ref == 'refs/heads/dev'
-      run: echo "DOCKER_TAGS=artfaal/wisdomwave:latest,artfaal/wisdomwave:dev-latest" >> $GITHUB_ENV
-
-    - name: Set Docker tags for other branches
-      if: github.ref != 'refs/heads/master' && github.ref != 'refs/heads/dev'
-      run: echo "DOCKER_TAGS=artfaal/wisdomwave:latest,artfaal/wisdomwave:other-latest" >> $GITHUB_ENV
+    - name: Set Docker tags and Deploy Path
+      run: |
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        if [ "$BRANCH_NAME" == "master" ]; then
+            echo "DOCKER_TAGS=artfaal/wisdomwave:master-latest" >> $GITHUB_ENV
+            echo "DEPLOY_PATHS=/var/docker/compose/wisdomwave/3.5,/var/docker/compose/wisdomwave/4" >> $GITHUB_ENV
+        else
+            echo "DOCKER_TAGS=artfaal/wisdomwave:dev-latest" >> $GITHUB_ENV
+            echo "DEPLOY_PATHS=/var/docker/compose/wisdomwave/dev" >> $GITHUB_ENV
+        fi
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4.1.1
@@ -49,16 +46,9 @@ jobs:
         ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
         echo "$SSH_PRIVATE_KEY" | tr -d '\r' > id_rsa
         chmod 600 id_rsa
-        BRANCH_NAME=${GITHUB_REF#refs/heads/}
-        IMAGE_TAG="other-latest"
-        DEPLOY_DIR="/var/docker/compose/wisdomwave/other"
-        if [ "$BRANCH_NAME" == "master" ]; then
-            IMAGE_TAG="master-latest"
-            DEPLOY_DIR="/var/docker/compose/wisdomwave/master-latest"
-        elif [ "$BRANCH_NAME" == "dev" ]; then
-            IMAGE_TAG="dev-latest"
-            DEPLOY_DIR="/var/docker/compose/wisdomwave/dev-latest"
-        fi
-        scp -i id_rsa update_and_rebuild.sh $SSH_USER@$SSH_HOST:$DEPLOY_DIR/
-        ssh -i id_rsa $SSH_USER@$SSH_HOST "cd $DEPLOY_DIR && IMAGE_TAG=$IMAGE_TAG ./update_and_rebuild.sh"
+        IFS=', ' read -ra ADDR <<< "$DEPLOY_PATHS"
+        for DEPLOY_DIR in "${ADDR[@]}"; do
+            scp -i id_rsa update_and_rebuild.sh $SSH_USER@$SSH_HOST:$DEPLOY_DIR/
+            ssh -i id_rsa $SSH_USER@$SSH_HOST "cd $DEPLOY_DIR && IMAGE_TAG=${DOCKER_TAGS##*:} ./update_and_rebuild.sh"
+        done
         rm -f id_rsa

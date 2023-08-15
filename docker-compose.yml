@@ -1,12 +1,9 @@
-version: '2'
+version: '3'
+
 services:
   telegram-bot:
-    image: artfaal/wisdomwave:$TAG
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
-    volumes:
-      - ./data:/app/data
+    image: artfaal/wisdomwave:${IMAGE_TAG}
     env_file:
       - ./.env
-
+    volumes:
+      - ./data:/app/data
