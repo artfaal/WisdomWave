@@ -23,18 +23,41 @@ jobs:
 
     - name: Set Docker tags for master branch
       if: github.ref == 'refs/heads/master'
-      run: echo "DOCKER_TAGS=artfaal/wisdomwavebots:latest,artfaal/wisdomwavebots:master-latest" >> $GITHUB_ENV
+      run: echo "DOCKER_TAGS=artfaal/wisdomwave:latest,artfaal/wisdomwave:master-latest" >> $GITHUB_ENV
 
     - name: Set Docker tags for dev branch
       if: github.ref == 'refs/heads/dev'
-      run: echo "DOCKER_TAGS=artfaal/wisdomwavebots:latest,artfaal/wisdomwavebots:dev-latest" >> $GITHUB_ENV
+      run: echo "DOCKER_TAGS=artfaal/wisdomwave:latest,artfaal/wisdomwave:dev-latest" >> $GITHUB_ENV
 
     - name: Set Docker tags for other branches
       if: github.ref != 'refs/heads/master' && github.ref != 'refs/heads/dev'
-      run: echo "DOCKER_TAGS=artfaal/wisdomwavebots:latest,artfaal/wisdomwavebots:other-latest" >> $GITHUB_ENV
+      run: echo "DOCKER_TAGS=artfaal/wisdomwave:latest,artfaal/wisdomwave:other-latest" >> $GITHUB_ENV
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4.1.1
       with:
         push: true
         tags: ${{ env.DOCKER_TAGS }}
+
+    - name: Deploy to server
+      env:
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        SSH_USER: ${{ secrets.SSH_USER }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+        echo "$SSH_PRIVATE_KEY" | tr -d '\r' > id_rsa
+        chmod 600 id_rsa
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        IMAGE_TAG="other-latest"
+        DEPLOY_DIR="/var/docker/compose/wisdomwave/other"
+        if [ "$BRANCH_NAME" == "master" ]; then
+            IMAGE_TAG="master-latest"
+            DEPLOY_DIR="/var/docker/compose/wisdomwave/master-latest"
+        elif [ "$BRANCH_NAME" == "dev" ]; then
+            IMAGE_TAG="dev-latest"
+            DEPLOY_DIR="/var/docker/compose/wisdomwave/dev-latest"
+        fi
+        scp -i id_rsa update_and_rebuild.sh $SSH_USER@$SSH_HOST:$DEPLOY_DIR/
+        ssh -i id_rsa $SSH_USER@$SSH_HOST "cd $DEPLOY_DIR && IMAGE_TAG=$IMAGE_TAG ./update_and_rebuild.sh"
+        rm -f id_rsa

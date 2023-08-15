@@ -1,11 +1,8 @@
 #!/bin/bash
 
-# Пуллим последние изменения из репозитория
-git pull
+# Pull the latest image based on the IMAGE_TAG environment variable
+docker pull artfaal/wisdomwave:${IMAGE_TAG:-other-latest}
 
-# Пересобираем Docker образ
-docker-compose build
-
-# Перезапускаем контейнеры
+# Use docker-compose to update your running containers
 docker-compose down
 docker-compose up -d
