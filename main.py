@@ -12,6 +12,8 @@ MODEL_NAME = os.getenv('MODEL_NAME', 'gpt-3.5-turbo-16k')
 OPENAI_ORGANIZATION = os.getenv('OPENAI_ORGANIZATION', None)  # Если организация не указана, используется None
 MAX_TOKENS = int(os.getenv('MAX_TOKENS', '16000'))  # Максимальное количество токенов для модели
 
+TOTAL_TOKENS_USED = 0
+
 openai.api_key = OPENAI_API_KEY
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -52,7 +54,11 @@ async def send_welcome(message: types.Message):
     """
     await message.answer(welcome_text, parse_mode=types.ParseMode.MARKDOWN)
 
-
+@dp.message_handler(commands=['status'])
+async def send_status(message: types.Message):
+    token_percentage = (TOTAL_TOKENS_USED / MAX_TOKENS) * 100
+    status_text = f"Tokens used: {TOTAL_TOKENS_USED} ({token_percentage:.2f}% of {MAX_TOKENS})"
+    await message.answer(status_text)
 
 @dp.message_handler(lambda message: message.text.lower().strip() == "забудь")
 async def forget_history(message: types.Message):
@@ -117,6 +123,7 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
     )
     response_text = response['choices'][0]['message']['content'].strip()
     total_tokens_used = response['usage']['total_tokens']
+    TOTAL_TOKENS_USED = total_tokens_used
     token_percentage = (total_tokens_used / MAX_TOKENS) * 100
 
     # Отправляем ответ пользователю
