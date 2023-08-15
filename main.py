@@ -97,6 +97,7 @@ async def handle_text_messages(message: types.Message):
 
 
 async def ask_openai(message: types.Message, text: str, chat_type: str, group_title=None):
+    global TOTAL_TOKENS_USED
     chat_id = message.chat.id
     user_id = message.from_user.id
 
