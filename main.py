@@ -52,11 +52,9 @@ async def send_welcome(message: types.Message):
     """
     await message.answer(welcome_text, parse_mode=types.ParseMode.MARKDOWN)
 
-
-
 @dp.message_handler(lambda message: message.text.lower().strip() == "забудь")
 async def forget_history(message: types.Message):
-    cursor.execute("DELETE FROM message_history WHERE chat_id=?", (message.chat.id,))
+    cursor.execute("DELETE FROM message_history WHERE chat_id=? AND user_id=?", (message.chat.id, message.from_user.id))
     conn.commit()
     await message.answer("Я забыл всю нашу предыдущую переписку.")
 
