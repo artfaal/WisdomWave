@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+      - dev
+      - '*'
 
 jobs:
   build_and_push:
@@ -19,8 +21,20 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
+    - name: Set Docker tags for master branch
+      if: github.ref == 'refs/heads/master'
+      run: echo "DOCKER_TAGS=artfaal/wisdomwavebots:latest,artfaal/wisdomwavebots:master-latest" >> $GITHUB_ENV
+
+    - name: Set Docker tags for dev branch
+      if: github.ref == 'refs/heads/dev'
+      run: echo "DOCKER_TAGS=artfaal/wisdomwavebots:latest,artfaal/wisdomwavebots:dev-latest" >> $GITHUB_ENV
+
+    - name: Set Docker tags for other branches
+      if: github.ref != 'refs/heads/master' && github.ref != 'refs/heads/dev'
+      run: echo "DOCKER_TAGS=artfaal/wisdomwavebots:latest,artfaal/wisdomwavebots:other-latest" >> $GITHUB_ENV
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v4.1.1
       with:
         push: true
-        tags: artfaal/wisdomwavebots:latest
+        tags: ${{ env.DOCKER_TAGS }}
