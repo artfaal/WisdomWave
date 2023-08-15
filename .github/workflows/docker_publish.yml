@@ -45,6 +45,7 @@ jobs:
         SSH_USER: ${{ secrets.SSH_USER }}
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
+        mkdir -p ~/.ssh/
         ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
         echo "$SSH_PRIVATE_KEY" | tr -d '\r' > id_rsa
         chmod 600 id_rsa
