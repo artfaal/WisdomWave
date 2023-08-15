@@ -3,6 +3,7 @@ import os
 import openai
 import sqlite3
 from aiogram import Bot, Dispatcher, types
+import subprocess
 
 # Чтение переменных окружения
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_DEFAULT_TELEGRAM_TOKEN')
@@ -31,6 +32,7 @@ BOT_USERNAME = None
 
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
+    branch_name, last_commit = get_git_info()
     welcome_text = f"""
 Привет! Я ваш бот, созданный на основе технологии OpenAI. Вот что я умею:
 
@@ -45,6 +47,8 @@ async def send_welcome(message: types.Message):
 **Настройки бота:**
 - Используемая модель: {MODEL_NAME}
 - Максимальное количество токенов: {MAX_TOKENS}
+- Ветка: {branch_name}
+- Последний коммит: {last_commit}
     """
     await message.answer(welcome_text, parse_mode=types.ParseMode.MARKDOWN)
 
@@ -135,6 +139,16 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
         logging.info(f"[{chat_type}] Response from OpenAI: {response_text}")
 
     logging.info(f"Tokens used: {total_tokens_used} ({token_percentage:.2f}% of {MAX_TOKENS})")
+
+def get_git_info():
+    # Получить имя текущей ветки
+    branch_name = subprocess.getoutput('git rev-parse --abbrev-ref HEAD').strip()
+
+    # Получить сообщение последнего коммита
+    last_commit = subprocess.getoutput('git log -1 --pretty=%B').strip()
+
+    return branch_name, last_commit
+
 
 async def on_startup(dp):
     global BOT_USERNAME
