@@ -112,7 +112,9 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
     response_text = response['choices'][0]['message']['content'].strip()
     total_tokens_used = response['usage']['total_tokens']
     token_percentage = (total_tokens_used / MAX_TOKENS) * 100
-
+    
+    # DEBUG
+    print(response_text)
     # Отправляем ответ пользователю
     await bot.send_message(
         chat_id=message.chat.id,
