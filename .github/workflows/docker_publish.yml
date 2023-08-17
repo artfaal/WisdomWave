@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - '*'
+    paths:
+      - '**.py'
+      - '**.sh'
+      - Dockerfile
+      - requirements.txt
 
 jobs:
   build_and_push:
