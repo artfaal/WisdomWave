@@ -2,6 +2,7 @@ import logging
 import os
 import openai
 import sqlite3
+import asyncio
 from aiogram import Bot, Dispatcher, types
 from openai.error import OpenAIError
 
@@ -55,6 +56,11 @@ async def forget_history(message: types.Message):
     conn.commit()
     await message.answer("Я забыл всю нашу предыдущую переписку.")
 
+async def send_typing_status(chat_id: int, delay: int = 15):
+    while True:
+        await bot.send_chat_action(chat_id, "typing")
+        await asyncio.sleep(delay)
+
 @dp.message_handler(content_types=types.ContentTypes.TEXT)
 async def handle_text_messages(message: types.Message):
     group_title = message.chat.title if message.chat.title else str(message.chat.id)
@@ -88,6 +94,7 @@ async def handle_text_messages(message: types.Message):
 async def ask_openai(message: types.Message, text: str, chat_type: str, group_title=None):
     chat_id = message.chat.id
     user_id = message.from_user.id
+    typing_task = asyncio.create_task(send_typing_status(chat_id))
 
     # Добавляем сообщение пользователя в базу данных
     cursor.execute("INSERT INTO message_history (chat_id, user_id, role, content) VALUES (?, ?, ?, ?)",
@@ -122,6 +129,7 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
             reply_to_message_id=message.message_id if chat_type in ["group", "supergroup"] else None,
             parse_mode=types.ParseMode.MARKDOWN
         )
+        typing_task.cancel()
         return
     response_text = response['choices'][0]['message']['content'].strip()
     total_tokens_used = response['usage']['total_tokens']
@@ -133,6 +141,7 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
         text=response_text,
         reply_to_message_id=message.message_id if chat_type in ["group", "supergroup"] else None,
         parse_mode=types.ParseMode.MARKDOWN
+        typing_task.cancel()
     )
 
     # Добавляем ответ бота в базу данных
