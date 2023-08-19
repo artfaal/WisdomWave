@@ -3,6 +3,7 @@ import os
 import openai
 import sqlite3
 from aiogram import Bot, Dispatcher, types
+from openai.error import OpenAIError
 
 # Чтение переменных окружения
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_DEFAULT_TELEGRAM_TOKEN')
@@ -104,11 +105,24 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
         logging.info(f"[{chat_type}] {message.from_user.full_name} said: {text}")
 
     # Отправляем запрос к OpenAI
-    response = openai.ChatCompletion.create(
-        model=MODEL_NAME,
-        messages=user_messages,
-        organization=OPENAI_ORGANIZATION
-    )
+    try:
+        response = openai.ChatCompletion.create(
+            model=MODEL_NAME,
+            messages=user_messages,
+            organization=OPENAI_ORGANIZATION
+        )
+    except OpenAIError as e:
+        logging.error(f"Error from OpenAI: {e}")
+        error_message = str(e)
+        user_notification = f"Извините, произошла ошибка при обработке вашего запроса: `{error_message}`."
+
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=user_notification,
+            reply_to_message_id=message.message_id if chat_type in ["group", "supergroup"] else None,
+            parse_mode=types.ParseMode.MARKDOWN
+        )
+        return
     response_text = response['choices'][0]['message']['content'].strip()
     total_tokens_used = response['usage']['total_tokens']
     token_percentage = (total_tokens_used / MAX_TOKENS) * 100
