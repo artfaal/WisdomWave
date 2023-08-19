@@ -56,15 +56,20 @@ async def forget_history(message: types.Message):
     conn.commit()
     await message.answer("Я забыл всю нашу предыдущую переписку.")
 
-async def send_typing_status(chat_id: int, delay: int = 15):
-    while True:
-        await bot.send_chat_action(chat_id, "typing")
-        await asyncio.sleep(delay)
+async def send_typing_status(chat_id: int, duration: int):
+    end_time = asyncio.get_event_loop().time() + duration
+    while asyncio.get_event_loop().time() < end_time:
+        await bot.send_chat_action(chat_id, 'typing')
+        await asyncio.sleep(10)  # "typing" статус длится 5 секунд
+
 
 @dp.message_handler(content_types=types.ContentTypes.TEXT)
 async def handle_text_messages(message: types.Message):
-    group_title = message.chat.title if message.chat.title else str(message.chat.id)
-    if message.chat.type in ["group", "supergroup"]:
+    chat_id = message.chat.id
+    chat_type = message.chat.type
+    group_title = message.chat.title if chat_type in ["group", "supergroup"] else str(chat_id)
+
+    if chat_type in ["group", "supergroup"]:
         logging.info(f"Received message in group: {group_title}")
         if BOT_USERNAME and f"@{BOT_USERNAME}" in message.text:
             logging.info(f"Detected mention of @{BOT_USERNAME}")
@@ -88,13 +93,16 @@ async def handle_text_messages(message: types.Message):
             logging.info(f"Did not detect a mention or reply in group message: {group_title}.")
             return
     else:
-        await ask_openai(message, message.text, "private", group_title)
+        await asyncio.gather(
+            send_typing_status(chat_id, 10),
+            ask_openai(message, message.text, chat_type, group_title)
+        )
 
 
 async def ask_openai(message: types.Message, text: str, chat_type: str, group_title=None):
     chat_id = message.chat.id
     user_id = message.from_user.id
-    typing_task = asyncio.create_task(send_typing_status(chat_id))
+    typing_task = asyncio.create_task(send_typing_status(chat_id, 10))
 
     # Добавляем сообщение пользователя в базу данных
     cursor.execute("INSERT INTO message_history (chat_id, user_id, role, content) VALUES (?, ?, ?, ?)",
@@ -118,6 +126,7 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
             messages=user_messages,
             organization=OPENAI_ORGANIZATION
         )
+        await bot.send_message(chat_id=message.from_user.id, text=response, parse_mode=types.ParseMode.MARKDOWN)
     except OpenAIError as e:
         logging.error(f"Error from OpenAI: {e}")
         error_message = str(e)
@@ -141,8 +150,8 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
         text=response_text,
         reply_to_message_id=message.message_id if chat_type in ["group", "supergroup"] else None,
         parse_mode=types.ParseMode.MARKDOWN
-        typing_task.cancel()
     )
+    typing_task.cancel()
 
     # Добавляем ответ бота в базу данных
     cursor.execute("INSERT INTO message_history (chat_id, user_id, role, content) VALUES (?, ?, ?, ?)",
