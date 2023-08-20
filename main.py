@@ -98,6 +98,11 @@ async def handle_text_messages(message: types.Message):
             ask_openai(message, message.text, chat_type, group_title)
         )
 
+def sanitize_markdown(text: str) -> str:
+    """Эта функция удаляет или экранирует символы, которые могут вызвать проблемы с Markdown."""
+    # Экранирование символов, которые могут вызвать проблемы
+    text = text.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
+    return text
 
 async def ask_openai(message: types.Message, text: str, chat_type: str, group_title=None):
     chat_id = message.chat.id
@@ -126,7 +131,9 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
             messages=user_messages,
             organization=OPENAI_ORGANIZATION
         )
-        await bot.send_message(chat_id=message.from_user.id, text=response, parse_mode=types.ParseMode.MARKDOWN)
+        response_text = sanitize_markdown(response['choices'][0]['message']['content'].strip())
+        await bot.send_message(chat_id=message.from_user.id, text=response_text, parse_mode=types.ParseMode.MARKDOWN)
+
     except OpenAIError as e:
         logging.error(f"Error from OpenAI: {e}")
         error_message = str(e)
