@@ -93,10 +93,9 @@ async def handle_text_messages(message: types.Message):
             logging.info(f"Did not detect a mention or reply in group message: {group_title}.")
             return
     else:
-        await asyncio.gather(
-            send_typing_status(chat_id, 10),
-            ask_openai(message, message.text, chat_type, group_title)
-        )
+        await send_typing_status(chat_id, 10)
+        await ask_openai(message, message.text, chat_type, group_title)
+
 
 def sanitize_markdown(text: str) -> str:
     """Эта функция удаляет или экранирует символы, которые могут вызвать проблемы с Markdown."""
