@@ -133,11 +133,11 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
 
     # Проверка на пороговые значения
     if total_tokens_used > MAX_TOKENS:
-        messages_to_delete = 16
-    elif total_tokens_used >= HARD_LIMIT:
         messages_to_delete = 8
-    elif total_tokens_used >= SOFT_LIMIT:
+    elif total_tokens_used >= HARD_LIMIT:
         messages_to_delete = 4
+    elif total_tokens_used >= SOFT_LIMIT:
+        messages_to_delete = 2
     else:
         messages_to_delete = 0
 
@@ -157,6 +157,7 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
 
         cursor.execute(f"DELETE FROM message_history WHERE chat_id=? AND user_id=? ORDER BY ROWID LIMIT {messages_to_delete}", (chat_id, user_id))
         conn.commit()
+        logging.info(f"Deleted the oldest {messages_to_delete} messages for user {user_id} in chat {chat_id} due to token limits.")
 
     # Отправляем ответ пользователю
     await bot.send_message(
