@@ -127,6 +127,25 @@ async def ask_openai(message: types.Message, text: str, chat_type: str, group_ti
     total_tokens_used = response['usage']['total_tokens']
     token_percentage = (total_tokens_used / MAX_TOKENS) * 100
 
+    # Пороговое значение токенов, после которого будет отправлено уведомление (например, 90% от MAX_TOKENS)
+    TOKEN_THRESHOLD = 0.9 * MAX_TOKENS
+
+    if total_tokens_used >= TOKEN_THRESHOLD:
+        warning_text = """
+    Внимание! Вы приближаетесь к максимальному количеству токенов.
+    Я освобожу место для новых сообщений, удалив часть истории.
+    Рекомендую отправить команду \"забудь\", если контекст диалога не так важен.
+        """
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=warning_text,
+            reply_to_message_id=message.message_id if chat_type in ["group", "supergroup"] else None
+        )
+
+        # Удаляем первые сообщения из истории. Здесь мы удаляем 2 сообщения (1 от пользователя и 1 от бота) для освобождения места.
+        cursor.execute("DELETE FROM message_history WHERE chat_id=? AND user_id=? ORDER BY ROWID LIMIT 2", (chat_id, user_id))
+        conn.commit()
+
     # Отправляем ответ пользователю
     await bot.send_message(
         chat_id=message.chat.id,
